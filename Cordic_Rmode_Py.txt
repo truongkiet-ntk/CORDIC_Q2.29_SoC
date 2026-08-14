@@ -1,0 +1,132 @@
+from math import sin, cos, radians, sqrt
+
+# (degree, cos_hex, sin_hex)
+
+data = [
+
+    (330,"376d0b42","e0002524"),
+    (315,"2d4159e1","d2bee048"),
+    (300,"1fffdada","c892f4c0"),
+    (270,"00002e32","c0000000"),
+    (240,"e0002526","c892f4be"),
+    (225,"d2bee048","d2bea61f"),
+    (210,"c892f4be","e0002526"),
+    (180,"c0000000","ffffd1cb"),
+
+    (150,"c892f4c0","1fffdada"),
+    (135,"d2bea61f","2d411fb8"),
+    (120,"e0002524","376d0b42"),
+    (90 ,"ffffd1cb","40000000"),
+    (60 ,"1fffdadc","376d0b40"),
+    (45 ,"2d411fb8","2d4159e1"),
+    (30 ,"376d0b40","1fffdadc"),
+    (0  ,"40000000","00002e34"),
+
+    (-30 ,"376d0b42","e0002524"),
+    (-45 ,"2d4159e1","d2bee048"),
+    (-60 ,"1fffdada","c892f4c0"),
+    (-90 ,"00002e32","c0000000"),
+    (-120,"e0002526","c892f4be"),
+    (-135,"d2bee048","d2bea61f"),
+    (-150,"c892f4be","e0002526"),
+    (-180,"c0000000","ffffd1cb"),
+
+    (-210,"c892f4c0","1fffdada"),
+    (-225,"d2bea61f","2d411fb8"),
+    (-240,"e0002524","376d0b42"),
+    (-270,"ffffd1cb","40000000"),
+    (-300,"1fffdadc","376d0b40"),
+    (-315,"2d411fb8","2d4159e1"),
+    (-330,"376d0b40","1fffdadc")
+
+]
+
+Q = 2**30
+
+
+def q2_30(hexval):
+
+    x = int(hexval,16)
+
+    if x & 0x80000000:
+        x -= 2**32
+
+    return x/Q
+
+
+print(
+"x      sin(x)      diff.sine      cos(x)      diff.cos"
+)
+
+print("-"*75)
+
+
+sum_abs_sin=0
+sum_abs_cos=0
+
+sum_sq_sin=0
+sum_sq_cos=0
+
+max_err_sin=0
+max_err_cos=0
+
+
+for deg,cos_hex,sin_hex in data:
+
+    sin_c=q2_30(sin_hex)
+    cos_c=q2_30(cos_hex)
+
+    sin_ref=sin(radians(deg))
+    cos_ref=cos(radians(deg))
+
+    err_sin=sin_c-sin_ref
+    err_cos=cos_c-cos_ref
+
+    abs_err_sin=abs(err_sin)
+    abs_err_cos=abs(err_cos)
+
+    sum_abs_sin += abs_err_sin
+    sum_abs_cos += abs_err_cos
+
+    sum_sq_sin += err_sin**2
+    sum_sq_cos += err_cos**2
+
+    max_err_sin=max(
+        max_err_sin,
+        abs_err_sin
+    )
+
+    max_err_cos=max(
+        max_err_cos,
+        abs_err_cos
+    )
+
+    print(
+        f"{deg:+06.1f}° "
+        f"{sin_c:+.8f} ({err_sin:+.8f}) "
+        f"{cos_c:+.8f} ({err_cos:+.8f})"
+    )
+
+
+N=len(data)
+
+mae_sin=sum_abs_sin/N
+mae_cos=sum_abs_cos/N
+
+rmse_sin=sqrt(sum_sq_sin/N)
+rmse_cos=sqrt(sum_sq_cos/N)
+
+
+print("\n")
+print("="*50)
+print("ERROR METRICS")
+print("="*50)
+
+print(f"MAE(sin)      : {mae_sin:.10e}")
+print(f"MAE(cos)      : {mae_cos:.10e}")
+
+print(f"RMSE(sin)     : {rmse_sin:.10e}")
+print(f"RMSE(cos)     : {rmse_cos:.10e}")
+
+print(f"Max Error(sin): {max_err_sin:.10e}")
+print(f"Max Error(cos): {max_err_cos:.10e}")

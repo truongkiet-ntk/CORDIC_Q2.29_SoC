@@ -1,0 +1,193 @@
+from math import sqrt, atan2, pi
+
+Q = 2**30
+
+# CORDIC gain
+CORDIC_GAIN = 1.646760258
+
+# ==================================================
+# Questa output
+# X_in Y_in X_out Y_out Z_out
+# ==================================================
+
+data = [
+
+("376cf5d0","e0000000","69648521","0000086c","3aaaa3a3"),
+("2d413ccd","d2bec333","69648525","00000b4f","37fff791"),
+("20000000","c8930a30","69648524","fffff794","35555c5d"),
+("00000000","c0000000","69648526","000002f5","2ffff9a5"),
+("e0000000","c8930a30","69648521","0000086c","2aaaa3a3"),
+("d2bec333","d2bec333","69648525","00000b4f","27fff791"),
+("c8930a30","e0000000","69648524","fffff794","25555c5d"),
+("c0000000","00000000","69648522","fffffd0c","2000065b"),
+("c8930a30","20000000","69648521","0000086c","1aaaa3a3"),
+("d2bec333","2d413ccd","69648525","00000b4f","17fff791"),
+("e0000000","376cf5d0","69648524","fffff794","15555c5d"),
+("00000000","40000000","69648522","fffffd0c","1000065b"),
+("20000000","376cf5d0","69648521","0000086c","0aaaa3a3"),
+("2d413ccd","2d413ccd","69648525","00000b4f","07fff791"),
+("376cf5d0","20000000","69648524","fffff794","05555c5d"),
+("40000000","00000000","69648526","000002f5","fffff9a5")
+
+]
+
+# ==================================================
+
+def q2_30(hexval):
+
+    x=int(hexval,16)
+
+    if x & 0x80000000:
+        x -= 2**32
+
+    return x/Q
+
+
+def angle_q30_to_deg(hexval):
+
+    x=int(hexval,16)
+
+    if x & 0x80000000:
+        x -= 2**32
+
+    return (x/Q)*360
+
+
+# ==================================================
+# Metrics
+# ==================================================
+
+sum_abs_x=0
+sum_abs_y=0
+sum_abs_z=0
+
+sum_sq_x=0
+sum_sq_y=0
+sum_sq_z=0
+
+max_x=0
+max_y=0
+max_z=0
+
+
+print(
+"AngleRef    Magnitude         Diff.X       Yout           Diff.Y      AngleOut      Diff.Angle"
+)
+
+print("-"*110)
+
+
+for xin,yin,xout,yout,zout in data:
+
+    x=q2_30(xin)
+    y=q2_30(yin)
+
+    x_hw=q2_30(xout)
+    y_hw=q2_30(yout)
+
+    z_hw=angle_q30_to_deg(zout)
+
+    # ==================================================
+    # Golden reference
+    # ==================================================
+
+    mag_ref=sqrt(x*x+y*y)*CORDIC_GAIN
+
+    angle_ref=atan2(y,x)*180/pi
+
+    # ==================================================
+    # Error
+    # ==================================================
+
+    err_x=x_hw-mag_ref
+
+    err_y=y_hw
+
+    err_z=z_hw-angle_ref
+
+    # Normalize angle error
+
+    while err_z>180:
+        err_z-=360
+
+    while err_z<-180:
+        err_z+=360
+
+    # ==================================================
+
+    sum_abs_x+=abs(err_x)
+    sum_abs_y+=abs(err_y)
+    sum_abs_z+=abs(err_z)
+
+    sum_sq_x+=err_x**2
+    sum_sq_y+=err_y**2
+    sum_sq_z+=err_z**2
+
+    max_x=max(max_x,abs(err_x))
+    max_y=max(max_y,abs(err_y))
+    max_z=max(max_z,abs(err_z))
+
+    print(
+    f"{angle_ref:+08.2f}   "
+    f"{x_hw:+.8f} ({err_x:+.8f})   "
+    f"{y_hw:+.8f} ({err_y:+.8f})   "
+    f"{z_hw:+08.2f} ({err_z:+.6f})"
+    )
+
+
+# ==================================================
+
+N=len(data)
+
+mae_x=sum_abs_x/N
+mae_y=sum_abs_y/N
+mae_z=sum_abs_z/N
+
+rmse_x=sqrt(sum_sq_x/N)
+rmse_y=sqrt(sum_sq_y/N)
+rmse_z=sqrt(sum_sq_z/N)
+
+print()
+print("="*60)
+print("ERROR METRICS")
+print("="*60)
+
+print(
+f"MAE(Magnitude): {mae_x:.10e}"
+)
+
+print(
+f"RMSE(Magnitude): {rmse_x:.10e}"
+)
+
+print(
+f"Max(Magnitude): {max_x:.10e}"
+)
+
+print()
+
+print(
+f"MAE(Y): {mae_y:.10e}"
+)
+
+print(
+f"RMSE(Y): {rmse_y:.10e}"
+)
+
+print(
+f"Max(Y): {max_y:.10e}"
+)
+
+print()
+
+print(
+f"MAE(Angle): {mae_z:.10e}"
+)
+
+print(
+f"RMSE(Angle): {rmse_z:.10e}"
+)
+
+print(
+f"Max(Angle): {max_z:.10e}"
+)
